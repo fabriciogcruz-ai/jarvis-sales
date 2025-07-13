@@ -1,14 +1,21 @@
+import os
 import undetected_chromedriver as uc
 from linkedin_scraper import Person, Company, actions
 from typing import List, Tuple
 
 def create_driver() -> uc.Chrome:
     options = uc.ChromeOptions()
-    options.headless = True  # modo headless real
+    options.headless = True
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # ✅ Força o caminho do Chrome no ambiente da Render se existir
+    chrome_path = "/usr/bin/google-chrome"
+    if os.path.exists(chrome_path):
+        options.binary_location = chrome_path
+
     return uc.Chrome(options=options, use_subprocess=True)
 
 def scrape_profile_and_company(

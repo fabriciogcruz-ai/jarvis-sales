@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jarvis do Fabrício Cruz 🤖</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <script>
+    function toggleLoginMode() {
+      const mode = document.getElementById('login-mode').value;
+      document.getElementById('cookie-field').style.display = mode === 'cookie' ? 'block' : 'none';
+      document.getElementById('email-field').style.display = mode === 'credenciais' ? 'block' : 'none';
+      document.getElementById('password-field').style.display = mode === 'credenciais' ? 'block' : 'none';
+    }
+
+    function scrollToMessages() {
+      const el = document.getElementById('status-box');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function listenProgress() {
+      const eventSource = new EventSource('/progress');
+      const status = document.getElementById('status');
+      status.innerHTML = '';
+
+      eventSource.onmessage = function (e) {
+        if (e.data === "[DONE]") {
+          status.innerHTML += `<p style="color: green; font-weight: 600;">✅ Pronto!</p>`;
+          eventSource.close();
+          return;
+        }
+        status.innerHTML += `<p>${e.data}</p>`;
+        scrollToMessages();
+      };
+
+      eventSource.onerror = function () {
+        if (!status.innerHTML.includes("✅ Pronto!")) {
+          status.innerHTML += `<p style="color: #0d47a1;">Quase pronto, segura ai!</p>`;
+        }
+        eventSource.close();
+      };
+    }
+
+    window.onload = function () {
+      toggleLoginMode();
+    };
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 Jarvis do Fabrício Cruz</h1>
+
+    <div class="login-box">
+      <div class="login-header">
+        <span>🔒 Acesso ao LinkedIn</span>
+      </div>
+
+      {% if error %}
+        <div class="error-box">
+          <span>❌ <strong>{{ error }}</strong></span>
+        </div>
+      {% endif %}
+
+      <form method="POST" action="/generate" onsubmit="listenProgress()">
+        <label for="login-mode">Modo de Autenticação:</label>
+        <select id="login-mode" name="login_mode" onchange="toggleLoginMode()">
+          <option value="cookie">🍪 Cookie (li_at)</option>
+          <option value="credenciais">📧 E-mail e Senha</option>
+        </select>
+
+        <div id="cookie-field">
+          <label for="cookie">🍪 <strong>Cookie <code>li_at</code>:</strong></label>
+          <input type="password" name="cookie" placeholder="Cole aqui seu cookie li_at">
+        </div>
+
+        <div id="email-field">
+          <label for="email">📧 Email do LinkedIn:</label>
+          <input type="email" name="email" placeholder="email@exemplo.com">
+        </div>
+
+        <div id="password-field">
+          <label for="password">🔑 Senha do LinkedIn:</label>
+          <input type="password" name="password" placeholder="Senha...">
+        </div>
+
+        <label>🔗 URL do Perfil no LinkedIn:</label>
+        <input type="text" name="profile" placeholder="https://www.linkedin.com/in/usuario/" required>
+
+        <label>🏢 URL da Empresa no LinkedIn:</label>
+        <input type="text" name="company" placeholder="https://www.linkedin.com/company/empresa/">
+
+        <button type="submit">⚡ Gerar Insights</button>
+      </form>
+    </div>
+
+    <div id="status-box">
+      <h3>Status:</h3>
+      <div id="status" class="status-log"></div>
+    </div>
+
+    <details class="tutorial-box">
+      <summary>📘 Como obter seu cookie <code>li_at</code></summary>
+      <p>1. Instale a extensão <a href="https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank">Cookie Editor</a>.</p>
+      <p>2. Acesse o <a href="https://www.linkedin.com/" target="_blank">linkedin.com</a> e faça login normalmente.</p>
+      <p>3. Clique no ícone da extensão, busque o campo <code>li_at</code>, copie seu valor.</p>
+      <p>4. Cole o valor no campo indicado aqui no app.</p>
+    </details>
+
+    {% if insights %}
+      <h2 class="insight-title">🧠 Insights Gerados para {{ nome_pessoa }}</h2>
+
+      {% for title, body in insights %}
+        <details class="insight-block">
+          <summary>{{ title|safe }}</summary>
+          <div class="insight-content">
+            {% for line in body %}
+              {% if line.startswith('- ') %}
+                <ul><li>{{ line[2:]|safe }}</li></ul>
+              {% else %}
+                <p>{{ line|safe }}</p>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </details>
+      {% endfor %}
+    {% endif %}
+  </div>
+</body>
+</html>

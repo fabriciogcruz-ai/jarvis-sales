@@ -1,0 +1,7 @@
+flask
+selenium
+linkedin-scraper
+openai
+reportlab
+webdriver-manager
+python-dotenv

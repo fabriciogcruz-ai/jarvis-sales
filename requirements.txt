@@ -7,3 +7,4 @@ webdriver-manager
 python-dotenv
 markdown
 undetected-chromedriver
+setuptools

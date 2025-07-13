@@ -6,3 +6,4 @@ reportlab
 webdriver-manager
 python-dotenv
 markdown
+undetected-chromedriver

@@ -2,6 +2,15 @@ import undetected_chromedriver as uc
 from linkedin_scraper import Person, Company, actions
 from typing import List, Tuple
 
+def create_driver() -> uc.Chrome:
+    options = uc.ChromeOptions()
+    options.headless = True  # modo headless real
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    return uc.Chrome(options=options, use_subprocess=True)
+
 def scrape_profile_and_company(
     profile_url: str,
     company_url: str | None = None,
@@ -10,12 +19,7 @@ def scrape_profile_and_company(
     cookie: str | None = None
 ) -> Tuple[str, str, str]:
 
-    options = uc.ChromeOptions()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-
-    driver = uc.Chrome(options=options)
+    driver = create_driver()
 
     try:
         if cookie:

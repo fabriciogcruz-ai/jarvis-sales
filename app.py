@@ -6,10 +6,30 @@ import os
 import markdown
 import time
 import queue
+import sqlite3
 
 load_dotenv()
 app = Flask(__name__)
 message_queue = queue.Queue()
+
+DB_PATH = "cache.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS insights_cache (
+            profile_url TEXT PRIMARY KEY,
+            nome_pessoa TEXT,
+            nome_empresa TEXT,
+            gpt_response TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 def get_gpt_insights(profile_text: str, model: str = "gpt-4o") -> str:
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -76,6 +96,23 @@ def generate():
         return render_template("index.html", error="Preencha todos os campos obrigatórios.")
 
     try:
+        # --- Lógica de Cache ---
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT nome_pessoa, nome_empresa, gpt_response FROM insights_cache WHERE profile_url = ?", (profile_url,))
+        cached_data = cursor.fetchone()
+        
+        if cached_data:
+            nome_pessoa, nome_empresa, gpt_response = cached_data
+            conn.close()
+            message_queue.put("🚀 Carregando insights do cache...")
+            time.sleep(0.5)
+            insights = format_insights(gpt_response)
+            return render_template("index.html", insights=insights, nome_pessoa=nome_pessoa, nome_empresa=nome_empresa)
+        
+        conn.close()
+        # -----------------------
+
         if login_mode == "cookie":
             message_queue.put("🔐 Fazendo login e extraindo dados com cookie...")
             time.sleep(0.2)
@@ -97,6 +134,20 @@ def generate():
 
         if not insights:
             return render_template("index.html", error="Não foi possível gerar insights estruturados.")
+
+        # --- Salvar no Cache ---
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR REPLACE INTO insights_cache (profile_url, nome_pessoa, nome_empresa, gpt_response) VALUES (?, ?, ?, ?)",
+                (profile_url, nome_pessoa, nome_empresa, gpt_response)
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao salvar no cache: {e}")
+        # -----------------------
 
         return render_template("index.html", insights=insights, nome_pessoa=nome_pessoa, nome_empresa=nome_empresa)
 
